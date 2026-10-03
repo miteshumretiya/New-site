@@ -5,7 +5,12 @@
 export const site = {
   name: "Rhinos",
   legalName: "Rhinos Athletic Club",
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://rhinos-gym.vercel.app",
+  // Canonical origin: explicit override, else Vercel's production domain.
+  url:
+    process.env.NEXT_PUBLIC_SITE_URL ??
+    (process.env.VERCEL_PROJECT_PRODUCTION_URL
+      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+      : "https://rhinos-gym-two.vercel.app"),
   tagline: "Built for the last rep.",
   description:
     "Rhinos is a strength & conditioning club in the Arts District, Los Angeles. Coached classes, open gym, boxing, cycling and a recovery lab. Your first week is free.",
