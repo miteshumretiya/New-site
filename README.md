@@ -8,8 +8,9 @@ Marketing site for **Rhinos**, a fictional strength & conditioning club in the A
 ## Stack
 
 - **Next.js 16** (App Router, Turbopack) + **TypeScript** + **Tailwind CSS v4**.
-- **GSAP**: ScrollTrigger and SplitText for scroll and text motion. The library also handles the micro-interactions.
-- **Lenis**: smooth scrolling, driven by GSAP's ticker so ScrollTrigger stays in sync.
+- **GSAP**: ScrollTrigger and SplitText for scroll and text motion. It's lazy-loaded after hydration, so it never sits on the critical path.
+- **Web Animations API**: the time-critical motion (hero intro, mobile menu, list staggers). These play instantly without a library.
+- **Lenis**: smooth scrolling, driven by GSAP's ticker so ScrollTrigger stays in sync. Also lazy-loaded.
 - **Raw WebGL** (no Three.js): one ~4 KB shader powers the hero and every image on the site.
 - **`next/font/local`**: self-hosted, subsetted Archivo + JetBrains Mono.
 - **`next/image`**: everything is served as AVIF/WebP.
@@ -40,8 +41,9 @@ src/
     ui/                brand mark, icons, section heading
   content/site.ts      all copy and data (classes, coaches, timetable, plans)
   lib/
-    gsap.ts            plugin registration + motion tokens (one easing family, one duration scale)
-    fx-queue.ts        runs below-the-fold effect setup in idle time, one section per task
+    motion.ts          motion tokens (one easing family, one duration scale), WAAPI helpers, lazy GSAP loader
+    gsap.ts            GSAP + ScrollTrigger + SplitText registration (only ever imported dynamically)
+    fx-queue.ts        loads GSAP after hydration, then runs effect setup in idle time, one section per task
     thermal/           shader, poses and offline scenes for the thermal art
   fonts/               subsetted variable fonts + OFL licences
 scripts/               art, OG and font build scripts
@@ -55,6 +57,15 @@ Tokens live in `src/app/globals.css` (`@theme`):
 - **Type**: a fluid type scale using `clamp()`.
 - **Spacing**: a gutter and section rhythm on top of Tailwind's 4 px scale.
 - **Shape and motion**: radii, shadows, and one easing family with a four-step duration scale.
+
+## Performance
+
+Lighthouse (mobile, local production build) scores 97/100/100/100, with LCP about 2.0 s, TBT about 120 ms and CLS 0. Desktop scores 99/100/100/100.
+
+- **First-paint JS:** only the React/Next runtime plus small islands ship before first paint. GSAP and Lenis arrive after hydration.
+- **Effect setup:** it's queued into idle time, so no single task grows long.
+- **Preloads:** only the main font and the hero image are preloaded (high priority). Everything below the fold is lazy.
+- **Fonts:** subsetted from 128 KB to 79 KB.
 
 ## Motion & accessibility principles
 

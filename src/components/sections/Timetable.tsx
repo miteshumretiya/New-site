@@ -4,7 +4,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { classById, site, week } from "@/content/site";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { ArrowUpRight } from "@/components/ui/Mark";
-import { gsap, prefersReducedMotion } from "@/lib/gsap";
+import { prefersReducedMotion, stagger } from "@/lib/motion";
 
 const fullDay: Record<string, string> = {
   Mon: "Monday",
@@ -37,11 +37,15 @@ export function Timetable() {
       return;
     }
     if (prefersReducedMotion() || !listRef.current) return;
-    gsap.fromTo(
+    const anims = stagger(
       listRef.current.children,
-      { y: 16, autoAlpha: 0 },
-      { y: 0, autoAlpha: 1, duration: 0.55, stagger: 0.045, ease: "expo.out", overwrite: true },
+      [
+        { opacity: 0, transform: "translateY(16px)" },
+        { opacity: 1, transform: "none" },
+      ],
+      { duration: 550, each: 45 },
     );
+    return () => anims.forEach((a) => a.cancel());
   }, [day]);
 
   const onKey = (e: React.KeyboardEvent) => {

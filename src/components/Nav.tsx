@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { nav, site } from "@/content/site";
 import { ArrowUpRight, Logo } from "@/components/ui/Mark";
-import { gsap, useGSAP, prefersReducedMotion } from "@/lib/gsap";
+import { EASE, prefersReducedMotion, stagger } from "@/lib/motion";
 import { scrollToTarget } from "@/components/fx/SmoothScroll";
 
 export function Nav() {
@@ -11,7 +11,7 @@ export function Nav() {
   const header = useRef<HTMLElement>(null);
   const menu = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
-  const tl = useRef<gsap.core.Timeline | null>(null);
+  const firstRun = useRef(true);
 
   /* Hide on scroll down, show on scroll up, go more opaque after the hero. */
   useEffect(() => {
@@ -90,41 +90,50 @@ export function Nav() {
     };
   }, []);
 
-  /* Full-screen menu timeline: clip-path wipe + staggered links. */
-  useGSAP(
-    () => {
-      const reduce = prefersReducedMotion();
-      const items = menu.current!.querySelectorAll("[data-menu-item]");
-      tl.current = gsap
-        .timeline({ paused: true, defaults: { ease: "expo.out" } })
-        .set(menu.current, { autoAlpha: 1 })
-        .fromTo(
-          menu.current,
-          { clipPath: "inset(0% 0% 100% 0%)" },
-          { clipPath: "inset(0% 0% 0% 0%)", duration: reduce ? 0 : 0.7, ease: "power4.inOut" },
-        )
-        .fromTo(
-          items,
-          { yPercent: 110 },
-          { yPercent: 0, duration: reduce ? 0 : 0.9, stagger: 0.06 },
-          reduce ? 0 : 0.35,
-        );
-    },
-    { scope: header },
-  );
-
+  /* Full-screen menu: clip-path wipe + staggered links (Web Animations API,
+     so it works the instant the page hydrates). Locks scroll while open. */
   useEffect(() => {
     const html = document.documentElement;
+    const el = menu.current!;
+    if (firstRun.current) {
+      firstRun.current = false;
+      if (!open) return;
+    }
+    const reduce = prefersReducedMotion();
+    el.getAnimations({ subtree: true }).forEach((a) => a.cancel());
     if (open) {
       window.__lenis?.stop();
       html.style.overflow = "hidden";
-      tl.current?.timeScale(1).play();
-      const first = menu.current?.querySelector<HTMLElement>("a, button");
+      el.style.visibility = "visible";
+      if (!reduce) {
+        el.animate([{ clipPath: "inset(0% 0% 100% 0%)" }, { clipPath: "inset(0% 0% 0% 0%)" }], {
+          duration: 700,
+          easing: EASE.inOut,
+        });
+        stagger(el.querySelectorAll("[data-menu-item]"), [{ transform: "translateY(110%)" }, { transform: "none" }], {
+          duration: 900,
+          delay: 350,
+          each: 60,
+        });
+      }
+      const first = el.querySelector<HTMLElement>("a, button");
       requestAnimationFrame(() => first?.focus({ preventScroll: true }));
     } else {
       window.__lenis?.start();
       html.style.overflow = "";
-      tl.current?.timeScale(1.6).reverse();
+      if (reduce) {
+        el.style.visibility = "hidden";
+        return;
+      }
+      const out = el.animate([{ clipPath: "inset(0% 0% 0% 0%)" }, { clipPath: "inset(0% 0% 100% 0%)" }], {
+        duration: 500,
+        easing: EASE.inOut,
+        fill: "forwards",
+      });
+      out.onfinish = () => {
+        el.style.visibility = "hidden";
+        out.cancel();
+      };
     }
   }, [open]);
 

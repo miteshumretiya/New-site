@@ -5,7 +5,7 @@ import { useRef, useState } from "react";
 import type { Coach } from "@/content/site";
 import { site } from "@/content/site";
 import { ArrowUpRight } from "@/components/ui/Mark";
-import { gsap, prefersReducedMotion } from "@/lib/gsap";
+import { prefersReducedMotion } from "@/lib/motion";
 
 /** Trading-card style coach profile: flips (button, or hover on desktop) to
  *  reveal the bio; tilts toward the pointer on fine-pointer devices. */
@@ -19,10 +19,13 @@ export function CoachCard({ coach }: { coach: Coach }) {
     const r = tilt.current.getBoundingClientRect();
     const x = (e.clientX - r.left) / r.width - 0.5;
     const y = (e.clientY - r.top) / r.height - 0.5;
-    gsap.to(tilt.current, { rotateY: x * 10, rotateX: -y * 10, duration: 0.6, ease: "power3.out" });
+    tilt.current.dataset.tilting = "true";
+    tilt.current.style.transform = `rotateX(${(-y * 10).toFixed(2)}deg) rotateY(${(x * 10).toFixed(2)}deg)`;
   };
   const onLeave = () => {
-    if (tilt.current) gsap.to(tilt.current, { rotateY: 0, rotateX: 0, duration: 0.9, ease: "elastic.out(1, 0.5)" });
+    if (!tilt.current) return;
+    delete tilt.current.dataset.tilting;
+    tilt.current.style.transform = "";
   };
 
   return (

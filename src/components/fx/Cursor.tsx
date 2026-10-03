@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { gsap, prefersReducedMotion } from "@/lib/gsap";
+import { prefersReducedMotion } from "@/lib/motion";
 
 type State = "default" | "link" | "media" | "label" | "hidden";
 
-/** Dot + lagging ring cursor. Only mounts behaviour on fine-pointer, hover
- *  capable devices without reduced motion; otherwise the native cursor stays.
- *  Elements can opt into states with data-cursor="media|label|hidden" and
- *  data-cursor-label="View". */
+/** Dot + lagging ring cursor (lerp). Only mounts behaviour on fine-pointer,
+ *  hover-capable devices without reduced motion; otherwise the native cursor
+ *  stays. Elements can opt into states with data-cursor="media|label|hidden"
+ *  and data-cursor-label="View". The loop sleeps once the ring settles. */
 export function Cursor() {
   const root = useRef<HTMLDivElement>(null);
   const dot = useRef<HTMLDivElement>(null);
@@ -26,12 +26,24 @@ export function Cursor() {
     const ringPos = { ...pos };
     let visible = false;
     let state: State = "default";
+    let raf = 0;
 
     const setState = (next: State, text = "") => {
       if (label.current && text) label.current.textContent = text;
       if (next === state) return;
       state = next;
       el.dataset.state = next;
+    };
+
+    const tick = () => {
+      dotPos.x += (pos.x - dotPos.x) * 0.55;
+      dotPos.y += (pos.y - dotPos.y) * 0.55;
+      ringPos.x += (pos.x - ringPos.x) * 0.16;
+      ringPos.y += (pos.y - ringPos.y) * 0.16;
+      if (dot.current) dot.current.style.transform = `translate3d(${dotPos.x}px, ${dotPos.y}px, 0)`;
+      if (ring.current) ring.current.style.transform = `translate3d(${ringPos.x}px, ${ringPos.y}px, 0)`;
+      const settled = Math.abs(pos.x - ringPos.x) < 0.1 && Math.abs(pos.y - ringPos.y) < 0.1;
+      raf = settled ? 0 : requestAnimationFrame(tick);
     };
 
     const onMove = (e: PointerEvent) => {
@@ -44,6 +56,7 @@ export function Cursor() {
         dotPos.y = ringPos.y = pos.y;
         html.classList.add("has-cursor");
       }
+      if (!raf) raf = requestAnimationFrame(tick);
       const target = (e.target as Element | null)?.closest<HTMLElement>(
         "[data-cursor], a, button, [role='tab'], label, summary, input, textarea, select",
       );
@@ -56,25 +69,15 @@ export function Cursor() {
     const onLeave = () => setState("hidden");
     const onEnter = () => setState("default");
 
-    const tick = () => {
-      dotPos.x += (pos.x - dotPos.x) * 0.55;
-      dotPos.y += (pos.y - dotPos.y) * 0.55;
-      ringPos.x += (pos.x - ringPos.x) * 0.16;
-      ringPos.y += (pos.y - ringPos.y) * 0.16;
-      if (dot.current) dot.current.style.transform = `translate3d(${dotPos.x}px, ${dotPos.y}px, 0)`;
-      if (ring.current) ring.current.style.transform = `translate3d(${ringPos.x}px, ${ringPos.y}px, 0)`;
-    };
-
     window.addEventListener("pointermove", onMove, { passive: true });
-    document.documentElement.addEventListener("pointerleave", onLeave);
-    document.documentElement.addEventListener("pointerenter", onEnter);
-    gsap.ticker.add(tick);
+    html.addEventListener("pointerleave", onLeave);
+    html.addEventListener("pointerenter", onEnter);
 
     return () => {
+      cancelAnimationFrame(raf);
       window.removeEventListener("pointermove", onMove);
-      document.documentElement.removeEventListener("pointerleave", onLeave);
-      document.documentElement.removeEventListener("pointerenter", onEnter);
-      gsap.ticker.remove(tick);
+      html.removeEventListener("pointerleave", onLeave);
+      html.removeEventListener("pointerenter", onEnter);
       html.classList.remove("has-cursor");
     };
   }, []);

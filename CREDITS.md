@@ -58,7 +58,7 @@ Neither licence declares a Reserved Font Name, so the subsetted builds keep thei
 | --- | --- |
 | [Next.js](https://nextjs.org), [React](https://react.dev) | MIT |
 | [Tailwind CSS](https://tailwindcss.com) | MIT |
-| [GSAP](https://gsap.com) (core, ScrollTrigger, SplitText) and `@gsap/react` | GSAP Standard "no charge" licence (free for commercial use since 3.13) |
+| [GSAP](https://gsap.com) (core, ScrollTrigger, SplitText) | GSAP Standard "no charge" licence (free for commercial use since 3.13) |
 | [Lenis](https://lenis.darkroom.engineering) | MIT |
 
 ## Content

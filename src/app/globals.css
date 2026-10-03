@@ -933,6 +933,12 @@
   .coach-card__tilt {
     transform-style: preserve-3d;
     will-change: transform;
+    /* springy settle when the pointer leaves; quick follow while tilting */
+    transition: transform 0.9s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .coach-card__tilt[data-tilting] {
+    transition-duration: 0.6s;
+    transition-timing-function: var(--ease-out-expo);
   }
   .coach-card__inner {
     display: grid;

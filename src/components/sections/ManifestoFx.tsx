@@ -1,15 +1,19 @@
 "use client";
 
-import { gsap, SplitText, useGSAP, MOTION_OK } from "@/lib/gsap";
+import { useEffect } from "react";
+import { MOTION_OK } from "@/lib/motion";
 import { scheduleFx } from "@/lib/fx-queue";
 
-/** Words brighten one by one as the manifesto scrolls through the viewport. */
+/** Words brighten one by one as the manifesto scrolls through the viewport.
+ *  Dimmed words stay at 40% so they still pass AA contrast for large text. */
 export function ManifestoFx() {
-  useGSAP(() => {
+  useEffect(() => {
     const el = document.querySelector<HTMLElement>("[data-manifesto]");
     if (!el) return;
-    const mm = gsap.matchMedia();
-    const cancel = scheduleFx(() =>
+    let revert = () => {};
+    const cancel = scheduleFx(({ gsap, SplitText }) => {
+      const mm = gsap.matchMedia();
+      revert = () => mm.revert();
       mm.add(MOTION_OK, () => {
         const split = SplitText.create(el, {
           type: "words",
@@ -31,12 +35,12 @@ export function ManifestoFx() {
           },
         });
         return () => split.revert();
-      }),
-    );
+      });
+    });
     return () => {
       cancel();
-      mm.revert();
+      revert();
     };
-  });
+  }, []);
   return null;
 }

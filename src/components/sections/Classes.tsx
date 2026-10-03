@@ -5,7 +5,7 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { classCategories, classes, type GymClass } from "@/content/site";
 import { ArrowUpRight, Plus } from "@/components/ui/Mark";
 import { SectionHeading } from "@/components/ui/SectionHeading";
-import { gsap, prefersReducedMotion } from "@/lib/gsap";
+import { EASE, prefersReducedMotion, stagger } from "@/lib/motion";
 
 type Category = (typeof classCategories)[number];
 
@@ -55,11 +55,15 @@ export function Classes() {
   /* Rows re-enter with a stagger when the filter changes. */
   useEffect(() => {
     if (firstRender.current || prefersReducedMotion() || !listRef.current) return;
-    gsap.fromTo(
+    const anims = stagger(
       listRef.current.children,
-      { y: 18, autoAlpha: 0 },
-      { y: 0, autoAlpha: 1, duration: 0.6, stagger: 0.05, ease: "expo.out", overwrite: true },
+      [
+        { opacity: 0, transform: "translateY(18px)" },
+        { opacity: 1, transform: "none" },
+      ],
+      { duration: 600, each: 50 },
     );
+    return () => anims.forEach((a) => a.cancel());
   }, [category]);
 
   /* Preview: wipe in the new art, fade the copy. */
@@ -68,23 +72,35 @@ export function Classes() {
       firstRender.current = false;
       return;
     }
-    if (prefersReducedMotion() || !previewRef.current) return;
-    const q = gsap.utils.selector(previewRef.current);
-    gsap.fromTo(
-      q("[data-preview-media]"),
-      { clipPath: "inset(0% 0% 0% 100%)" },
-      { clipPath: "inset(0% 0% 0% 0%)", duration: 0.9, ease: "expo.out", overwrite: true },
+    const root = previewRef.current;
+    if (prefersReducedMotion() || !root) return;
+    const anims: Animation[] = [];
+    root.querySelectorAll("[data-preview-media]").forEach((el) =>
+      anims.push(
+        el.animate([{ clipPath: "inset(0% 0% 0% 100%)" }, { clipPath: "inset(0% 0% 0% 0%)" }], {
+          duration: 900,
+          easing: EASE.out,
+        }),
+      ),
     );
-    gsap.fromTo(
-      q("[data-preview-img]"),
-      { scale: 1.18 },
-      { scale: 1, duration: 1.2, ease: "expo.out", overwrite: true },
+    root
+      .querySelectorAll("[data-preview-img]")
+      .forEach((el) =>
+        anims.push(
+          el.animate([{ transform: "scale(1.18)" }, { transform: "none" }], { duration: 1200, easing: EASE.out }),
+        ),
+      );
+    anims.push(
+      ...stagger(
+        root.querySelectorAll("[data-preview-copy] > *"),
+        [
+          { opacity: 0, transform: "translateY(14px)" },
+          { opacity: 1, transform: "none" },
+        ],
+        { duration: 600, each: 50 },
+      ),
     );
-    gsap.fromTo(
-      q("[data-preview-copy] > *"),
-      { y: 14, autoAlpha: 0 },
-      { y: 0, autoAlpha: 1, duration: 0.6, stagger: 0.05, ease: "expo.out", overwrite: true },
-    );
+    return () => anims.forEach((a) => a.cancel());
   }, [active.id]);
 
   const onTabKey = (e: React.KeyboardEvent) => {

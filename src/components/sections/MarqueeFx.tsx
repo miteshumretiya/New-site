@@ -1,14 +1,17 @@
 "use client";
 
-import { gsap, ScrollTrigger, useGSAP, MOTION_OK } from "@/lib/gsap";
+import { useEffect } from "react";
+import { MOTION_OK } from "@/lib/motion";
 import { scheduleFx } from "@/lib/fx-queue";
 
 /** Takes over the CSS loop: constant drift plus a boost and skew from scroll
  *  velocity, flipping direction with the scroll direction. */
 export function MarqueeFx() {
-  useGSAP(() => {
-    const mm = gsap.matchMedia();
-    const cancel = scheduleFx(() =>
+  useEffect(() => {
+    let revert = () => {};
+    const cancel = scheduleFx(({ gsap, ScrollTrigger }) => {
+      const mm = gsap.matchMedia();
+      revert = () => mm.revert();
       mm.add(MOTION_OK, () => {
         const tracks = gsap.utils.toArray<HTMLElement>("[data-marquee-track]");
         if (!tracks.length) return;
@@ -54,12 +57,12 @@ export function MarqueeFx() {
           window.removeEventListener("resize", measure);
           state.forEach((s) => (s.el.style.animation = ""));
         };
-      }),
-    );
+      });
+    });
     return () => {
       cancel();
-      mm.revert();
+      revert();
     };
-  });
+  }, []);
   return null;
 }

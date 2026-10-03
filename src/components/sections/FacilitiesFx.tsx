@@ -1,12 +1,12 @@
 "use client";
 
-import { gsap, ScrollTrigger, useGSAP } from "@/lib/gsap";
+import { useEffect } from "react";
 import { scheduleFx } from "@/lib/fx-queue";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
 export function FacilitiesFx() {
-  useGSAP(() => {
+  useEffect(() => {
     const section = document.getElementById("facilities");
     if (!section) return;
     const pin = section.querySelector<HTMLElement>("[data-hpin]")!;
@@ -14,7 +14,7 @@ export function FacilitiesFx() {
     const track = section.querySelector<HTMLElement>("[data-htrack]")!;
     const progress = section.querySelector<HTMLElement>("[data-hprogress]")!;
     const count = section.querySelector<HTMLElement>("[data-hcount]")!;
-    const panels = gsap.utils.toArray<HTMLElement>("[data-hpanel]", section);
+    const panels = Array.from(section.querySelectorAll<HTMLElement>("[data-hpanel]"));
     const total = panels.length;
 
     /* Native carousel (touch, small screens, reduced motion, no pin). */
@@ -41,8 +41,10 @@ export function FacilitiesFx() {
     syncNative();
 
     /* Desktop with motion: pin and translate the track with vertical scroll. */
-    const mm = gsap.matchMedia();
-    const cancel = scheduleFx(() =>
+    let revert = () => {};
+    const cancel = scheduleFx(({ gsap, ScrollTrigger }) => {
+      const mm = gsap.matchMedia();
+      revert = () => mm.revert();
       mm.add("(min-width: 1024px) and (prefers-reduced-motion: no-preference)", () => {
         section.dataset.pinned = "true";
         viewport.scrollLeft = 0;
@@ -109,17 +111,17 @@ export function FacilitiesFx() {
           progress.style.transform = "";
           ScrollTrigger.refresh();
         };
-      }),
-    );
+      });
+    });
 
     return () => {
       cancel();
-      mm.revert();
+      revert();
       prev.removeEventListener("click", onPrev);
       next.removeEventListener("click", onNext);
       viewport.removeEventListener("scroll", syncNative);
     };
-  });
+  }, []);
 
   return null;
 }

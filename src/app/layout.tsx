@@ -29,7 +29,7 @@ const jetbrains = localFont({
   variable: "--font-jetbrains",
   display: "swap",
   preload: false,
-  adjustFontFallback: false,
+  adjustFontFallback: "Arial",
 });
 
 export const metadata: Metadata = {

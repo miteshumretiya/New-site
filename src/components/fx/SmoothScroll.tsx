@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
-import Lenis from "lenis";
-import { gsap, ScrollTrigger, prefersReducedMotion } from "@/lib/gsap";
+import type Lenis from "lenis";
+import { prefersReducedMotion } from "@/lib/motion";
+import { scheduleFx } from "@/lib/fx-queue";
 
 declare global {
   interface Window {
@@ -13,8 +14,9 @@ declare global {
 const OFFSET = -72;
 
 /** Lenis smooth scrolling driven by GSAP's ticker so ScrollTrigger stays in
- *  lock-step. Skipped entirely for reduced motion (native scroll remains).
- *  Also owns same-page anchor clicks so they glide instead of jumping. */
+ *  lock-step. Loaded from the idle queue (native scrolling until then) and
+ *  skipped entirely for reduced motion. Also owns same-page anchor clicks so
+ *  they glide instead of jumping. */
 export function SmoothScroll() {
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
@@ -29,22 +31,32 @@ export function SmoothScroll() {
       if (hash.length > 1) history.replaceState(null, "", hash);
     };
     document.addEventListener("click", onClick);
-
     if (prefersReducedMotion()) return () => document.removeEventListener("click", onClick);
 
-    const lenis = new Lenis({ lerp: 0.11, autoRaf: false });
-    window.__lenis = lenis;
-
-    lenis.on("scroll", ScrollTrigger.update);
-    const tick = (time: number) => lenis.raf(time * 1000);
-    gsap.ticker.add(tick);
-    gsap.ticker.lagSmoothing(0);
+    let teardown = () => {};
+    let disposed = false;
+    const cancel = scheduleFx(({ gsap, ScrollTrigger }) => {
+      void import("lenis").then(({ default: LenisCtor }) => {
+        if (disposed) return;
+        const lenis = new LenisCtor({ lerp: 0.11, autoRaf: false });
+        window.__lenis = lenis;
+        lenis.on("scroll", ScrollTrigger.update);
+        const tick = (time: number) => lenis.raf(time * 1000);
+        gsap.ticker.add(tick);
+        gsap.ticker.lagSmoothing(0);
+        teardown = () => {
+          gsap.ticker.remove(tick);
+          lenis.destroy();
+          delete window.__lenis;
+        };
+      });
+    });
 
     return () => {
+      disposed = true;
+      cancel();
+      teardown();
       document.removeEventListener("click", onClick);
-      gsap.ticker.remove(tick);
-      lenis.destroy();
-      delete window.__lenis;
     };
   }, []);
 
