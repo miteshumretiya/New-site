@@ -69,7 +69,7 @@ Lighthouse (mobile, local production build) scores 97/100/100/100, with LCP abou
 
 ## Motion & accessibility principles
 
-- **No-JS safe:** every animated element renders in its final state without JS. Initial states are only ever set by GSAP.
+- **No-JS safe:** every animated element renders in its final state without JS. Initial states are only ever set by script (GSAP or the Web Animations API).
 - **Preloader:** pure CSS, shown once per session and gone in about 1.4 s even if scripts never load. The hero intro syncs to its CSS clock.
 - **Reduced motion:** `prefers-reduced-motion` turns off Lenis, pinning, reveals, the preloader and the live canvas. The facilities gallery becomes a native swipe carousel.
 - **Pointer:** the custom cursor and magnetic buttons only exist on fine-pointer, hover-capable devices. Touch keeps native behaviour.
